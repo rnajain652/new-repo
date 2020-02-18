@@ -18,47 +18,66 @@ playerImg=pygame.image.load("player.png")
 fixed_obstacle1Img=pygame.image.load("fixed_obstacle1.png")
 shipImg=pygame.image.load("ship.png")
 
+player_status = 1
+player1_score = 0
+player2_score = 0
+
 def isCollision(X1,Y1,X2,Y2):
-	x1 = X1 + 12
-	x2 = X2 + 32
-	y1 = Y1 + 12
-	y2 = Y2 + 32
-
-	distance=math.sqrt(math.pow(x1 - x2, 2)+ math.pow(y1- y2, 2))
-
-	if distance < 44:
-		return  True
+	if((X2<=(X1+24)<=(X2+64) and Y2 <= Y1 <= (Y2 +64)) or (X2 <= (X1+24) <= (X2+64) and Y2 <= (Y1+24) <= (Y2 +64)) or (X2 <= (X1+24) <= (X2+64) and Y2 <= Y1 <= (Y2 +64)) or (X2 <= X1 <= (X2+64) and Y2 <= (Y1+24) <= (Y2 +64))):
+	#	print("collide")
+		return True
 	else:
 		return False
 
-font = pygame.font.Font("freesansbold.ttf",32)
+#	x1 = X1 + 12
+#	x2 = X2 + 32
+#	y1 = Y1 + 12
+#	y2 = Y2 + 32
 
-def gameover(p,ship):
-	pygame.draw.rect(screen,(0,0,0,127),(50,150,700,300))
-	text = font.render("GAME OVER", True, (255,0,0))
-	screen.blit(text,(300,300))
-	p.velocity = 0
-	for i in range(len(ship)):
-		ship[i].X_velocity = 0
-		p.X_cood = 0
-		p.Y_cood = 400
+#	distance=math.sqrt(math.pow(x1 - x2, 2)+ math.pow(y1- y2, 2))
+
+#	if distance < 44:
+#		return  True
+#	else:
+#		return False
+
+def end1(p):
+	global playerImg 
+	global player_status
+	p.X_cood=400
+	p.Y_cood=0
+	player_status+=1
+	print(player_status)
+	playerImg = pygame.image.load("player2.png")
+
+def end2(p):
+	global playerImg
+	global player_status
+	p.X_cood=400
+	p.Y_cood=600
+	player_status+=1
+	playerImg = pygame.image.load("player.png")
+
+font = pygame.font.Font("freesansbold.ttf",32)
 
 class Player:
 	def __init__(self):
 		self.X_cood = 400
 		self.Y_cood = 600
 		self.velocity = 0.3
+		self.score=0
 		return
 
 	def move(self, pressed_key):
+		global player_status
 
 		if self.X_cood < self.velocity:
-			self.X_cood = 0
+			self.X_cood = self.velocity
 		if self.X_cood >= 768:
 			self.X_cood = 768
 
 		if self.Y_cood < self.velocity:
-			self.Y_cood = 0
+			self.Y_cood = self.velocity
 		if self.Y_cood >= 598:
 			self.Y_cood = 598		
 		
@@ -73,6 +92,13 @@ class Player:
 
 		elif pressed_key[pygame.K_DOWN] == True:
 			self.Y_cood += self.velocity
+
+		if player_status%2 == 1:
+			if self.Y_cood>100 :
+				self.score += 5
+			elif self.Y_cood%100 == 30:
+				self.score += 10 
+		print("\n", player_status, "\t", self.score)
 		return		
 
 class Obstacle():
@@ -98,6 +124,9 @@ class MovingObstacle(Obstacle):
 		self.X_cood += self.X_velocity
 		return 
 
+	def change_speed(self):
+		self.X_velocity=0.6
+
 blocks = []
 no_of_blocks=random.randint(8,10)
 for i in range(no_of_blocks):
@@ -117,7 +146,21 @@ for i in range(no_of_ships):
 p1 = Player()
 
 #Game Loop
-running=True
+running = False
+hold=True
+while hold:
+#	screen.fill((255,255,255))
+	for event in pygame.event.get():
+		if event.type==pygame.QUIT:
+			hold=False
+		text = font.render("TO START PRESS ANY KEY", True, (255,255,255))
+		screen.blit(text,(200,250))
+		if event.type == pygame.KEYDOWN:
+			running=True
+			hold=False
+
+	pygame.display.update()
+
 while running:
 
 	screen.fill((51,153,255))
@@ -139,12 +182,29 @@ while running:
 		screen.blit(shipImg,(ships[i].X_cood, ships[i].Y_cood))
 
 	for i in range(len(ships)):
-		collide=isCollision(p1.X_cood, p1.Y_cood, ships[i].X_cood, ships[i].Y_cood)
-		if collide == True:
-			gameover(p1,ships)
+		if isCollision(p1.X_cood, p1.Y_cood, ships[i].X_cood, ships[i].Y_cood):
+
+			if player_status==4:
+				player2_score=p1.score
+				p1.score=0		
+				running=False
+				hold2=True
+
+			elif player_status%2 == 1:
+				player1_score=p1.score
+				p1.score=0
+				end1(p1)
+			elif player_status%2 == 0:
+				player2_score=p1.score
+				p1.score=0
+				if player_status==2:
+					for j in range(len(ships)):
+						ships[j].change_speed()
+				end2(p1)
+		#	print(player_status)
 
 	for event in pygame.event.get():
-		if event.type==pygame.QUIT:
+		if event.type == pygame.QUIT:
 			running=False
 
 	key=pygame.key.get_pressed()
@@ -152,13 +212,56 @@ while running:
 	screen.blit(playerImg,(p1.X_cood,p1.Y_cood))
 
 	for i in range(len(ships)):
-		collide=isCollision(p1.X_cood, p1.Y_cood, ships[i].X_cood, ships[i].Y_cood)
-		if collide == True:
-			gameover(p1,ships)
+		if isCollision(p1.X_cood, p1.Y_cood, ships[i].X_cood, ships[i].Y_cood) :
+			if player_status==4:
+				player2_score=p1.score
+				p1.score=0
+				running=False
+				hold2=True			
+			elif player_status%2 ==1:
+				player1_score=p1.score
+				p1.score=0
+				end1(p1)
+			elif player_status%2 ==0:
+				player2_score=p1.score
+				p1.score=0
+				if player_status==2:
+					for j in range(len(ships)):
+						ships[j].change_speed()
+				end2(p1)
+
+		#	print(player_status)
 
 	for i in range(len(blocks)):
-		collide=isCollision(p1.X_cood, p1.Y_cood, blocks[i].X_cood, blocks[i].Y_cood)
-		if collide == True:
-			gameover(p1,ships)
+		if isCollision(p1.X_cood, p1.Y_cood, blocks[i].X_cood, blocks[i].Y_cood) :
+			if player_status==4:
+				player2_score=p1.score
+				p1.score=0
+				running=False
+				hold2=True
+			elif player_status%2 ==1:
+				player1_score=p1.score
+				p1.score=0
+				end1(p1)
+			elif player_status%2==0:
+				player2_score=p1.score
+				p1.score=0
+				if player_status==2:
+					for j in range(len(ships)):
+						ships[j].change_speed()
+				end2(p1)	
+
+		#	print(player_status)
+	#print("player1_score : ", player1_score ,"\tplayer2_score : ", player2_score, end='\n')
+
+	pygame.display.update()
+
+while hold2:
+	screen.fill((255,0,0))
+	text = font.render("GAME OVER", True, (0,0,0))
+	screen.blit(text,(350,250))
+	for event in pygame.event.get():
+		if event.type==pygame.QUIT:
+			hold2=False
 
 	pygame.display.update()
